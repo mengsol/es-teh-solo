@@ -10,7 +10,6 @@ import SalesReport, { saveSale } from "./components/SalesReport";
 const MENU: MenuItem[] = [
   { id: "etm-besar", name: "Es Teh Manis Besar", price: 5000, emoji: "🧊", category: "original" },
   { id: "etm-kecil", name: "Es Teh Manis Kecil", price: 3000, emoji: "🍵", category: "original" },
-  { id: "ayam-goreng", name: "Ayam Goreng", price: 10000, emoji: "🍗", category: "original" },
 ];
 
 const QUICK_CASH = [10000, 20000, 50000, 100000];
