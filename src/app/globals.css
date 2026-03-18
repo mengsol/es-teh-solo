@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #1B8C3D;
+  --color-primary-dark: #14692E;
+  --color-primary-light: #E8F5E9;
+  --color-navy: #1B2A4A;
+  --color-navy-light: #2C3E6B;
+}
+
+html, body {
+  overflow: hidden;
+  height: 100dvh;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+@media print {
+  body * { visibility: hidden; }
+  #receipt-print, #receipt-print * { visibility: visible; }
+  #receipt-print { position: absolute; left: 0; top: 0; width: 80mm; }
+}
