@@ -5,47 +5,27 @@ import Logo from "./components/Logo";
 import MenuCard, { type MenuItem } from "./components/MenuCard";
 import Cart, { type CartItem } from "./components/Cart";
 import Receipt from "./components/Receipt";
+import SalesReport, { saveSale } from "./components/SalesReport";
 
 const MENU: MenuItem[] = [
-  // Original
-  { id: "et-original", name: "Es Teh Original", price: 5000, emoji: "🍵", category: "original" },
-  { id: "et-manis", name: "Es Teh Manis", price: 5000, emoji: "🧊", category: "original" },
-  { id: "teh-hangat", name: "Teh Hangat", price: 4000, emoji: "☕", category: "original" },
-  { id: "et-tawar", name: "Es Teh Tawar", price: 4000, emoji: "🫖", category: "original" },
-  // Rasa
-  { id: "et-lemon", name: "Es Teh Lemon", price: 7000, emoji: "🍋", category: "rasa" },
-  { id: "et-lychee", name: "Es Teh Lychee", price: 8000, emoji: "🫧", category: "rasa" },
-  { id: "et-mango", name: "Es Teh Mango", price: 8000, emoji: "🥭", category: "rasa" },
-  { id: "et-peach", name: "Es Teh Peach", price: 8000, emoji: "🍑", category: "rasa" },
-  { id: "et-strawberry", name: "Es Teh Strawberry", price: 8000, emoji: "🍓", category: "rasa" },
-  { id: "et-coklat", name: "Es Teh Coklat", price: 8000, emoji: "🍫", category: "rasa" },
-  // Topping
-  { id: "tp-boba", name: "+ Boba", price: 3000, emoji: "⚫", category: "topping" },
-  { id: "tp-jelly", name: "+ Jelly Nata", price: 2000, emoji: "🟡", category: "topping" },
-  { id: "tp-pudding", name: "+ Pudding", price: 3000, emoji: "🍮", category: "topping" },
+  { id: "etm-besar", name: "Es Teh Manis Besar", price: 5000, emoji: "🧊", category: "original" },
+  { id: "etm-kecil", name: "Es Teh Manis Kecil", price: 3000, emoji: "🍵", category: "original" },
 ];
-
-const CATEGORIES = [
-  { key: "all", label: "Semua" },
-  { key: "original", label: "Original" },
-  { key: "rasa", label: "Rasa" },
-  { key: "topping", label: "Topping" },
-] as const;
 
 const QUICK_CASH = [10000, 20000, 50000, 100000];
 
 export default function POSPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [category, setCategory] = useState<string>("all");
   const [showPayment, setShowPayment] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
   const [payAmount, setPayAmount] = useState(0);
   const [customPay, setCustomPay] = useState("");
   const [orderNum, setOrderNum] = useState(1);
+  const [showCart, setShowCart] = useState(false);
+  const [showReport, setShowReport] = useState(false);
 
   const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
-
-  const filtered = category === "all" ? MENU : MENU.filter((m) => m.category === category);
+  const cartCount = cart.reduce((s, i) => s + i.qty, 0);
 
   const addToCart = useCallback((item: MenuItem) => {
     setCart((prev) => {
@@ -79,6 +59,16 @@ export default function POSPage() {
   };
 
   const finishOrder = () => {
+    const amount = payAmount || parseInt(customPay);
+    saveSale({
+      id: `${Date.now()}-${orderNum}`,
+      orderNumber: orderNum,
+      items: cart.map((c) => ({ name: c.name, qty: c.qty, price: c.price })),
+      total,
+      payAmount: amount,
+      change: amount - total,
+      date: new Date().toISOString(),
+    });
     setShowReceipt(false);
     setCart([]);
     setOrderNum((n) => n + 1);
@@ -93,11 +83,19 @@ export default function POSPage() {
           <h1 className="font-bold text-lg leading-tight">Es Teh Solo</h1>
           <p className="text-green-300 text-xs">Point of Sale</p>
         </div>
-        <div className="ml-auto text-right">
-          <p className="text-xs text-gray-300">
-            {new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
-          </p>
-          <p className="text-xs text-green-300">Order #{String(orderNum).padStart(4, "0")}</p>
+        <div className="ml-auto flex items-center gap-3">
+          <button
+            onClick={() => setShowReport(true)}
+            className="bg-navy-light px-3 py-1.5 rounded-lg text-xs font-medium active:scale-95 transition-transform"
+          >
+            📊 Laporan
+          </button>
+          <div className="text-right">
+            <p className="text-xs text-gray-300">
+              {new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+            </p>
+            <p className="text-xs text-green-300">Order #{String(orderNum).padStart(4, "0")}</p>
+          </div>
         </div>
       </header>
 
@@ -105,35 +103,18 @@ export default function POSPage() {
       <div className="flex-1 flex overflow-hidden">
         {/* Menu area */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Category tabs */}
-          <div className="flex gap-2 px-4 py-3 bg-white border-b border-gray-200">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat.key}
-                onClick={() => setCategory(cat.key)}
-                className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors
-                  ${category === cat.key
-                    ? "bg-primary text-white shadow"
-                    : "bg-gray-100 text-gray-600 active:bg-gray-200"
-                  }`}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
-
           {/* Menu grid */}
-          <div className="flex-1 overflow-y-auto p-4">
-            <div className="grid grid-cols-3 lg:grid-cols-4 gap-3">
-              {filtered.map((item) => (
+          <div className="flex-1 overflow-y-auto p-4 pb-20 lg:pb-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {MENU.map((item) => (
                 <MenuCard key={item.id} item={item} onAdd={addToCart} />
               ))}
             </div>
           </div>
         </div>
 
-        {/* Cart sidebar */}
-        <aside className="w-80 bg-white border-l border-gray-200 flex flex-col">
+        {/* Cart sidebar - desktop/landscape */}
+        <aside className="hidden lg:flex w-80 bg-white border-l border-gray-200 flex-col">
           <Cart
             items={cart}
             onIncrease={increase}
@@ -143,6 +124,46 @@ export default function POSPage() {
           />
         </aside>
       </div>
+
+      {/* Floating cart button - tablet/mobile only */}
+      {!showCart && (
+        <button
+          onClick={() => setShowCart(true)}
+          className="lg:hidden fixed bottom-4 right-4 z-40 bg-primary text-white rounded-full w-16 h-16
+                     flex items-center justify-center shadow-lg active:scale-95 transition-transform"
+          aria-label="Buka keranjang"
+        >
+          <span className="text-2xl">🛒</span>
+          {cartCount > 0 && (
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+              {cartCount}
+            </span>
+          )}
+        </button>
+      )}
+
+      {/* Cart slide-up panel - tablet/mobile only */}
+      {showCart && (
+        <div className="lg:hidden fixed inset-0 z-40">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowCart(false)} />
+          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl max-h-[75dvh] flex flex-col shadow-2xl">
+            <div className="flex justify-center pt-2 pb-1">
+              <button
+                onClick={() => setShowCart(false)}
+                className="w-12 h-1.5 bg-gray-300 rounded-full"
+                aria-label="Tutup keranjang"
+              />
+            </div>
+            <Cart
+              items={cart}
+              onIncrease={increase}
+              onDecrease={decrease}
+              onClear={() => setCart([])}
+              onCheckout={() => { setShowCart(false); handleCheckout(); }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Payment modal */}
       {showPayment && (
@@ -218,6 +239,9 @@ export default function POSPage() {
       {showReceipt && (
         <Receipt items={cart} payAmount={payAmount || parseInt(customPay)} onClose={finishOrder} orderNumber={orderNum} />
       )}
+
+      {/* Sales Report modal */}
+      {showReport && <SalesReport onClose={() => setShowReport(false)} />}
     </div>
   );
 }
