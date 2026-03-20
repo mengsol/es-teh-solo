@@ -13,6 +13,14 @@ export interface SaleRecord {
   created_at: string;
 }
 
+interface ExpenseRecord {
+  id: string;
+  item_name: string;
+  amount: number;
+  created_by: string;
+  created_at: string;
+}
+
 interface SalesReportProps {
   onClose: () => void;
 }
@@ -40,7 +48,8 @@ export default function SalesReport({ onClose }: SalesReportProps) {
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"harian" | "bulanan">("harian");
+  const [tab, setTab] = useState<"harian" | "bulanan" | "pengeluaran">("harian");
+  const [expenses, setExpenses] = useState<ExpenseRecord[]>([]);
 
   useEffect(() => {
     async function fetchSales() {
@@ -51,7 +60,15 @@ export default function SalesReport({ onClose }: SalesReportProps) {
       if (!error && data) setSales(data);
       setLoading(false);
     }
+    async function fetchExpenses() {
+      const { data, error } = await getSupabase()
+        .from("expenses")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (!error && data) setExpenses(data);
+    }
     fetchSales();
+    fetchExpenses();
   }, []);
 
   const dateGroups = sales.reduce<Record<string, SaleRecord[]>>((acc, s) => {
@@ -110,8 +127,17 @@ export default function SalesReport({ onClose }: SalesReportProps) {
           >
             Bulanan
           </button>
+          <button
+            onClick={() => setTab("pengeluaran")}
+            className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-colors ${
+              tab === "pengeluaran" ? "bg-red-500 text-white" : "bg-gray-100 text-gray-600"
+            }`}
+          >
+            Pengeluaran
+          </button>
         </div>
 
+        {tab !== "pengeluaran" && (
         <div className="px-5 py-3 border-b border-gray-100">
           {tab === "harian" ? (
             <select
@@ -137,7 +163,9 @@ export default function SalesReport({ onClose }: SalesReportProps) {
             </select>
           )}
         </div>
+        )}
 
+        {tab !== "pengeluaran" && (
         <div className="grid grid-cols-3 gap-3 px-5 py-3">
           <div className="bg-primary-light rounded-xl p-3 text-center">
             <p className="text-xs text-gray-500">Pendapatan</p>
@@ -152,10 +180,43 @@ export default function SalesReport({ onClose }: SalesReportProps) {
             <p className="text-primary font-bold text-sm truncate">{topItem ? `${topItem[0]} (${topItem[1]})` : "-"}</p>
           </div>
         </div>
+        )}
 
         <div className="flex-1 overflow-y-auto px-5 py-2 space-y-2">
           {loading ? (
             <p className="text-gray-400 text-center mt-8 text-sm">Memuat data...</p>
+          ) : tab === "pengeluaran" ? (
+            <>
+              {/* Expense summary */}
+              <div className="grid grid-cols-2 gap-3 pb-2">
+                <div className="bg-red-50 rounded-xl p-3 text-center">
+                  <p className="text-xs text-gray-500">Total Pengeluaran</p>
+                  <p className="text-red-500 font-bold text-sm">{formatRp(expenses.reduce((s, e) => s + e.amount, 0))}</p>
+                </div>
+                <div className="bg-red-50 rounded-xl p-3 text-center">
+                  <p className="text-xs text-gray-500">Jumlah Item</p>
+                  <p className="text-red-500 font-bold text-sm">{expenses.length}</p>
+                </div>
+              </div>
+              {expenses.length === 0 ? (
+                <p className="text-gray-400 text-center mt-4 text-sm">Belum ada pengeluaran</p>
+              ) : (
+                expenses.map((exp) => (
+                  <div key={exp.id} className="flex items-center justify-between border border-gray-200 rounded-xl px-4 py-3">
+                    <div>
+                      <p className="text-navy font-medium text-sm">{exp.item_name}</p>
+                      <p className="text-gray-400 text-xs">
+                        {new Date(exp.created_at).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}
+                        {" · "}
+                        {new Date(exp.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
+                        {" · "}{exp.created_by}
+                      </p>
+                    </div>
+                    <p className="text-red-500 font-bold text-sm">-{formatRp(exp.amount)}</p>
+                  </div>
+                ))
+              )}
+            </>
           ) : activeData.length === 0 ? (
             <p className="text-gray-400 text-center mt-8 text-sm">Belum ada transaksi</p>
           ) : tab === "bulanan" ? (

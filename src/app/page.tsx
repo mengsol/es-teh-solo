@@ -7,6 +7,7 @@ import Cart, { type CartItem } from "./components/Cart";
 import Receipt from "./components/Receipt";
 import SalesReport, { saveSale } from "./components/SalesReport";
 import Login, { type User } from "./components/Login";
+import Expense from "./components/Expense";
 
 const MENU: MenuItem[] = [
   { id: "etm-besar", name: "Es Teh Manis Besar", price: 5000, image: "/teh-besar.png", category: "original" },
@@ -25,6 +26,7 @@ export default function POSPage() {
   const [orderNum, setOrderNum] = useState(1);
   const [showCart, setShowCart] = useState(false);
   const [showReport, setShowReport] = useState(false);
+  const [showExpense, setShowExpense] = useState(false);
 
   useEffect(() => {
     try {
@@ -108,6 +110,12 @@ export default function POSPage() {
               📊 Laporan
             </button>
           )}
+          <button
+            onClick={() => setShowExpense(true)}
+            className="bg-navy-light px-3 py-1.5 rounded-lg text-xs font-medium active:scale-95 transition-transform"
+          >
+            🛒 Pengeluaran
+          </button>
           <div className="text-right">
             <p className="text-xs text-gray-300">
               👤 {user.username} ({user.role})
@@ -266,6 +274,9 @@ export default function POSPage() {
 
       {/* Sales Report modal */}
       {showReport && <SalesReport onClose={() => setShowReport(false)} />}
+
+      {/* Expense modal */}
+      {showExpense && <Expense onClose={() => setShowExpense(false)} username={user.username} />}
     </div>
   );
 }
