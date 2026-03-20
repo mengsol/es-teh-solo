@@ -32,7 +32,7 @@ export default function POSPage() {
     try {
       const saved = localStorage.getItem("estehsolo-user");
       if (saved) setUser(JSON.parse(saved));
-    } catch { /* ignore */ }
+    } catch (_e) { /* ignore */ }
   }, []);
 
   const handleLogout = () => {

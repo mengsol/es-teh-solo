@@ -1,4 +1,4 @@
-const CACHE_NAME = "estehsolo-v1";
+const CACHE_NAME = "estehsolo-v2";
 const ASSETS = ["/", "/manifest.json"];
 
 self.addEventListener("install", (e) => {
