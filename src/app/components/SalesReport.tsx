@@ -25,6 +25,10 @@ function toDateKey(d: string) {
   return new Date(d).toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" });
 }
 
+function toMonthKey(d: string) {
+  return new Date(d).toLocaleDateString("id-ID", { month: "long", year: "numeric" });
+}
+
 export async function saveSale(sale: Omit<SaleRecord, "created_at">) {
   const { error } = await getSupabase().from("sales").insert(sale);
   if (error) console.error("Gagal simpan:", error.message);
@@ -33,8 +37,10 @@ export async function saveSale(sale: Omit<SaleRecord, "created_at">) {
 export default function SalesReport({ onClose }: SalesReportProps) {
   const [sales, setSales] = useState<SaleRecord[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>("");
+  const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<"harian" | "bulanan">("harian");
 
   useEffect(() => {
     async function fetchSales() {
@@ -57,11 +63,23 @@ export default function SalesReport({ onClose }: SalesReportProps) {
 
   const dates = Object.keys(dateGroups);
   const filtered = selectedDate ? (dateGroups[selectedDate] || []) : sales;
-  const totalRevenue = filtered.reduce((s, r) => s + r.total, 0);
-  const totalTransactions = filtered.length;
+
+  // Monthly groups
+  const monthGroups = sales.reduce<Record<string, SaleRecord[]>>((acc, s) => {
+    const key = toMonthKey(s.created_at);
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(s);
+    return acc;
+  }, {});
+  const months = Object.keys(monthGroups);
+  const monthFiltered = selectedMonth ? (monthGroups[selectedMonth] || []) : sales;
+
+  const activeData = tab === "harian" ? filtered : monthFiltered;
+  const totalRevenue = activeData.reduce((s, r) => s + r.total, 0);
+  const totalTransactions = activeData.length;
 
   const itemCount: Record<string, number> = {};
-  filtered.forEach((r) => r.items.forEach((i) => {
+  activeData.forEach((r) => r.items.forEach((i) => {
     itemCount[i.name] = (itemCount[i.name] || 0) + i.qty;
   }));
   const topItem = Object.entries(itemCount).sort((a, b) => b[1] - a[1])[0];
@@ -74,17 +92,50 @@ export default function SalesReport({ onClose }: SalesReportProps) {
           <button onClick={onClose} className="text-gray-400 text-2xl leading-none" aria-label="Tutup">×</button>
         </div>
 
-        <div className="px-5 py-3 border-b border-gray-100">
-          <select
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm text-navy font-medium focus:border-primary focus:outline-none"
+        {/* Tab switcher */}
+        <div className="flex px-5 pt-3 gap-2">
+          <button
+            onClick={() => setTab("harian")}
+            className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-colors ${
+              tab === "harian" ? "bg-primary text-white" : "bg-gray-100 text-gray-600"
+            }`}
           >
-            <option value="">Semua Tanggal</option>
-            {dates.map((d) => (
-              <option key={d} value={d}>{d}</option>
-            ))}
-          </select>
+            Harian
+          </button>
+          <button
+            onClick={() => setTab("bulanan")}
+            className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-colors ${
+              tab === "bulanan" ? "bg-primary text-white" : "bg-gray-100 text-gray-600"
+            }`}
+          >
+            Bulanan
+          </button>
+        </div>
+
+        <div className="px-5 py-3 border-b border-gray-100">
+          {tab === "harian" ? (
+            <select
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm text-navy font-medium focus:border-primary focus:outline-none"
+            >
+              <option value="">Semua Tanggal</option>
+              {dates.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+          ) : (
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm text-navy font-medium focus:border-primary focus:outline-none"
+            >
+              <option value="">Semua Bulan</option>
+              {months.map((m) => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div className="grid grid-cols-3 gap-3 px-5 py-3">
@@ -105,8 +156,50 @@ export default function SalesReport({ onClose }: SalesReportProps) {
         <div className="flex-1 overflow-y-auto px-5 py-2 space-y-2">
           {loading ? (
             <p className="text-gray-400 text-center mt-8 text-sm">Memuat data...</p>
-          ) : filtered.length === 0 ? (
+          ) : activeData.length === 0 ? (
             <p className="text-gray-400 text-center mt-8 text-sm">Belum ada transaksi</p>
+          ) : tab === "bulanan" ? (
+            <>
+              {/* Item breakdown per bulan */}
+              <div className="space-y-2">
+                <p className="text-navy font-semibold text-sm">Rincian per Item</p>
+                {Object.entries(itemCount).sort((a, b) => b[1] - a[1]).map(([name, qty]) => {
+                  const itemTotal = activeData.reduce((sum, r) =>
+                    sum + r.items.filter(i => i.name === name).reduce((s, i) => s + i.price * i.qty, 0), 0);
+                  return (
+                    <div key={name} className="flex items-center justify-between bg-primary-light rounded-xl px-4 py-3">
+                      <div>
+                        <p className="text-navy font-medium text-sm">{name}</p>
+                        <p className="text-gray-500 text-xs">Terjual: {qty} cup</p>
+                      </div>
+                      <p className="text-primary font-bold text-sm">{formatRp(itemTotal)}</p>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Daily breakdown in month */}
+              <div className="space-y-2 pt-2">
+                <p className="text-navy font-semibold text-sm">Per Hari</p>
+                {Object.entries(
+                  activeData.reduce<Record<string, { count: number; total: number }>>((acc, s) => {
+                    const day = toDateKey(s.created_at);
+                    if (!acc[day]) acc[day] = { count: 0, total: 0 };
+                    acc[day].count++;
+                    acc[day].total += s.total;
+                    return acc;
+                  }, {})
+                ).map(([day, info]) => (
+                  <div key={day} className="flex items-center justify-between border border-gray-200 rounded-xl px-4 py-3">
+                    <div>
+                      <p className="text-navy font-medium text-sm">{day}</p>
+                      <p className="text-gray-400 text-xs">{info.count} transaksi</p>
+                    </div>
+                    <p className="text-primary font-bold text-sm">{formatRp(info.total)}</p>
+                  </div>
+                ))}
+              </div>
+            </>
           ) : (
             filtered.map((sale) => (
               <div key={sale.id} className="border border-gray-200 rounded-xl overflow-hidden">
