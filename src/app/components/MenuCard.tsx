@@ -4,7 +4,8 @@ export interface MenuItem {
   id: string;
   name: string;
   price: number;
-  emoji: string;
+  emoji?: string;
+  image?: string;
   category: "original" | "rasa" | "topping";
 }
 
@@ -22,7 +23,11 @@ export default function MenuCard({ item, onAdd }: MenuCardProps) {
                  hover:border-primary focus:border-primary focus:outline-none"
       aria-label={`Tambah ${item.name} - Rp ${item.price.toLocaleString("id-ID")}`}
     >
-      <span className="text-4xl">{item.emoji}</span>
+      {item.image ? (
+        <img src={item.image} alt={item.name} className="w-20 h-20 object-contain" />
+      ) : (
+        <span className="text-4xl">{item.emoji}</span>
+      )}
       <span className="text-navy font-semibold text-sm text-center leading-tight">{item.name}</span>
       <span className="text-primary font-bold text-base">
         Rp {item.price.toLocaleString("id-ID")}

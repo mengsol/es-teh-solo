@@ -9,8 +9,8 @@ import SalesReport, { saveSale } from "./components/SalesReport";
 import Login, { type User } from "./components/Login";
 
 const MENU: MenuItem[] = [
-  { id: "etm-besar", name: "Es Teh Manis Besar", price: 5000, emoji: "🧊", category: "original" },
-  { id: "etm-kecil", name: "Es Teh Manis Kecil", price: 3000, emoji: "🍵", category: "original" },
+  { id: "etm-besar", name: "Es Teh Manis Besar", price: 5000, image: "/teh-besar.png", category: "original" },
+  { id: "etm-kecil", name: "Es Teh Manis Kecil", price: 3000, image: "/teh-kecil.png", category: "original" },
 ];
 
 const QUICK_CASH = [10000, 20000, 50000, 100000];
