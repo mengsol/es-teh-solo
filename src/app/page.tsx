@@ -62,12 +62,11 @@ export default function POSPage() {
     const amount = payAmount || parseInt(customPay);
     saveSale({
       id: `${Date.now()}-${orderNum}`,
-      orderNumber: orderNum,
+      order_number: orderNum,
       items: cart.map((c) => ({ name: c.name, qty: c.qty, price: c.price })),
       total,
-      payAmount: amount,
+      pay_amount: amount,
       change: amount - total,
-      date: new Date().toISOString(),
     });
     setShowReceipt(false);
     setCart([]);

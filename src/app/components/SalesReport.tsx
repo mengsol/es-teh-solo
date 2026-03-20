@@ -1,15 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getSupabase } from "../lib/supabase";
 
 export interface SaleRecord {
   id: string;
-  orderNumber: number;
+  order_number: number;
   items: { name: string; qty: number; price: number }[];
   total: number;
-  payAmount: number;
+  pay_amount: number;
   change: number;
-  date: string; // ISO string
+  created_at: string;
 }
 
 interface SalesReportProps {
@@ -24,37 +25,31 @@ function toDateKey(d: string) {
   return new Date(d).toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" });
 }
 
-export function saveSale(sale: SaleRecord) {
-  const sales = getSales();
-  sales.push(sale);
-  localStorage.setItem("estehsolo-sales", JSON.stringify(sales));
-}
-
-export function getSales(): SaleRecord[] {
-  if (typeof window === "undefined") return [];
-  try {
-    return JSON.parse(localStorage.getItem("estehsolo-sales") || "[]");
-  } catch {
-    return [];
-  }
+export async function saveSale(sale: Omit<SaleRecord, "created_at">) {
+  const { error } = await getSupabase().from("sales").insert(sale);
+  if (error) console.error("Gagal simpan:", error.message);
 }
 
 export default function SalesReport({ onClose }: SalesReportProps) {
   const [sales, setSales] = useState<SaleRecord[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const all = getSales();
-    setSales(all);
-    if (all.length > 0) {
-      setSelectedDate(toDateKey(all[all.length - 1].date));
+    async function fetchSales() {
+      const { data, error } = await getSupabase()
+        .from("sales")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (!error && data) setSales(data);
+      setLoading(false);
     }
+    fetchSales();
   }, []);
 
-  // Group by date
   const dateGroups = sales.reduce<Record<string, SaleRecord[]>>((acc, s) => {
-    const key = toDateKey(s.date);
+    const key = toDateKey(s.created_at);
     if (!acc[key]) acc[key] = [];
     acc[key].push(s);
     return acc;
@@ -65,7 +60,6 @@ export default function SalesReport({ onClose }: SalesReportProps) {
   const totalRevenue = filtered.reduce((s, r) => s + r.total, 0);
   const totalTransactions = filtered.length;
 
-  // Item terlaris
   const itemCount: Record<string, number> = {};
   filtered.forEach((r) => r.items.forEach((i) => {
     itemCount[i.name] = (itemCount[i.name] || 0) + i.qty;
@@ -75,13 +69,11 @@ export default function SalesReport({ onClose }: SalesReportProps) {
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85dvh] flex flex-col shadow-2xl">
-        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
           <h2 className="text-navy font-bold text-lg">📊 Laporan Penjualan</h2>
           <button onClick={onClose} className="text-gray-400 text-2xl leading-none" aria-label="Tutup">×</button>
         </div>
 
-        {/* Date filter */}
         <div className="px-5 py-3 border-b border-gray-100">
           <select
             value={selectedDate}
@@ -95,7 +87,6 @@ export default function SalesReport({ onClose }: SalesReportProps) {
           </select>
         </div>
 
-        {/* Summary cards */}
         <div className="grid grid-cols-3 gap-3 px-5 py-3">
           <div className="bg-primary-light rounded-xl p-3 text-center">
             <p className="text-xs text-gray-500">Pendapatan</p>
@@ -111,21 +102,22 @@ export default function SalesReport({ onClose }: SalesReportProps) {
           </div>
         </div>
 
-        {/* Transaction list */}
         <div className="flex-1 overflow-y-auto px-5 py-2 space-y-2">
-          {filtered.length === 0 ? (
+          {loading ? (
+            <p className="text-gray-400 text-center mt-8 text-sm">Memuat data...</p>
+          ) : filtered.length === 0 ? (
             <p className="text-gray-400 text-center mt-8 text-sm">Belum ada transaksi</p>
           ) : (
-            filtered.slice().reverse().map((sale) => (
+            filtered.map((sale) => (
               <div key={sale.id} className="border border-gray-200 rounded-xl overflow-hidden">
                 <button
                   onClick={() => setExpandedId(expandedId === sale.id ? null : sale.id)}
                   className="w-full flex items-center justify-between px-4 py-3 text-left active:bg-gray-50"
                 >
                   <div>
-                    <p className="text-navy font-medium text-sm">Order #{String(sale.orderNumber).padStart(4, "0")}</p>
+                    <p className="text-navy font-medium text-sm">Order #{String(sale.order_number).padStart(4, "0")}</p>
                     <p className="text-gray-400 text-xs">
-                      {new Date(sale.date).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
+                      {new Date(sale.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
                     </p>
                   </div>
                   <p className="text-primary font-bold text-sm">{formatRp(sale.total)}</p>
@@ -139,7 +131,7 @@ export default function SalesReport({ onClose }: SalesReportProps) {
                       </div>
                     ))}
                     <div className="flex justify-between text-xs text-gray-400 pt-1 border-t border-dashed border-gray-200">
-                      <span>Bayar: {formatRp(sale.payAmount)}</span>
+                      <span>Bayar: {formatRp(sale.pay_amount)}</span>
                       <span>Kembali: {formatRp(sale.change)}</span>
                     </div>
                   </div>
@@ -149,7 +141,6 @@ export default function SalesReport({ onClose }: SalesReportProps) {
           )}
         </div>
 
-        {/* Footer */}
         <div className="px-5 py-3 border-t border-gray-200">
           <button
             onClick={onClose}
