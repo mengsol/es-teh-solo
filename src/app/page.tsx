@@ -95,39 +95,47 @@ export default function POSPage() {
   return (
     <div className="h-dvh flex flex-col">
       {/* Header */}
-      <header className="bg-navy text-white flex items-center gap-3 px-4 py-2 shadow-lg">
-        <Logo size={48} />
-        <div>
-          <h1 className="font-bold text-lg leading-tight">Es Teh Solo</h1>
-          <p className="text-green-300 text-xs">Point of Sale</p>
+      <header className="bg-navy text-white shadow-lg">
+        {/* Baris atas: Logo + Nama + User + Keluar */}
+        <div className="flex items-center gap-2 px-3 py-2 sm:px-4">
+          <Logo size={36} />
+          <div className="min-w-0">
+            <h1 className="font-bold text-sm sm:text-lg leading-tight truncate">Es Teh Solo</h1>
+            <p className="text-green-300 text-[10px] sm:text-xs">Point of Sale</p>
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            <div className="text-right hidden sm:block">
+              <p className="text-xs text-gray-300">
+                👤 {user.username} ({user.role})
+              </p>
+              <p className="text-xs text-green-300">Order #{String(orderNum).padStart(4, "0")}</p>
+            </div>
+            <p className="text-[10px] text-gray-300 sm:hidden">👤 {user.username}</p>
+            <button
+              onClick={handleLogout}
+              className="bg-red-500/20 text-red-300 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-medium active:scale-95 transition-transform"
+            >
+              Keluar
+            </button>
+          </div>
         </div>
-        <div className="ml-auto flex items-center gap-3">
+        {/* Baris bawah: Tombol aksi + Order number */}
+        <div className="flex items-center gap-2 px-3 pb-2 sm:px-4">
           {user.role === "admin" && (
             <button
               onClick={() => setShowReport(true)}
-              className="bg-navy-light px-3 py-1.5 rounded-lg text-xs font-medium active:scale-95 transition-transform"
+              className="bg-navy-light px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-medium active:scale-95 transition-transform"
             >
               📊 Laporan
             </button>
           )}
           <button
             onClick={() => setShowExpense(true)}
-            className="bg-navy-light px-3 py-1.5 rounded-lg text-xs font-medium active:scale-95 transition-transform"
+            className="bg-navy-light px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-medium active:scale-95 transition-transform"
           >
             🛒 Pengeluaran
           </button>
-          <div className="text-right">
-            <p className="text-xs text-gray-300">
-              👤 {user.username} ({user.role})
-            </p>
-            <p className="text-xs text-green-300">Order #{String(orderNum).padStart(4, "0")}</p>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="bg-red-500/20 text-red-300 px-3 py-1.5 rounded-lg text-xs font-medium active:scale-95 transition-transform"
-          >
-            Keluar
-          </button>
+          <p className="ml-auto text-[10px] sm:text-xs text-green-300 sm:hidden">Order #{String(orderNum).padStart(4, "0")}</p>
         </div>
       </header>
 
