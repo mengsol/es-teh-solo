@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Logo from "./components/Logo";
 import MenuCard, { type MenuItem } from "./components/MenuCard";
 import Cart, { type CartItem } from "./components/Cart";
 import Receipt from "./components/Receipt";
 import SalesReport, { saveSale } from "./components/SalesReport";
+import Login, { type User } from "./components/Login";
 
 const MENU: MenuItem[] = [
   { id: "etm-besar", name: "Es Teh Manis Besar", price: 5000, emoji: "🧊", category: "original" },
@@ -15,6 +16,7 @@ const MENU: MenuItem[] = [
 const QUICK_CASH = [10000, 20000, 50000, 100000];
 
 export default function POSPage() {
+  const [user, setUser] = useState<User | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showPayment, setShowPayment] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
@@ -23,6 +25,19 @@ export default function POSPage() {
   const [orderNum, setOrderNum] = useState(1);
   const [showCart, setShowCart] = useState(false);
   const [showReport, setShowReport] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("estehsolo-user");
+      if (saved) setUser(JSON.parse(saved));
+    } catch { /* ignore */ }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("estehsolo-user");
+    setUser(null);
+    setCart([]);
+  };
 
   const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
   const cartCount = cart.reduce((s, i) => s + i.qty, 0);
@@ -73,6 +88,8 @@ export default function POSPage() {
     setOrderNum((n) => n + 1);
   };
 
+  if (!user) return <Login onLogin={setUser} />;
+
   return (
     <div className="h-dvh flex flex-col">
       {/* Header */}
@@ -83,18 +100,26 @@ export default function POSPage() {
           <p className="text-green-300 text-xs">Point of Sale</p>
         </div>
         <div className="ml-auto flex items-center gap-3">
-          <button
-            onClick={() => setShowReport(true)}
-            className="bg-navy-light px-3 py-1.5 rounded-lg text-xs font-medium active:scale-95 transition-transform"
-          >
-            📊 Laporan
-          </button>
+          {user.role === "admin" && (
+            <button
+              onClick={() => setShowReport(true)}
+              className="bg-navy-light px-3 py-1.5 rounded-lg text-xs font-medium active:scale-95 transition-transform"
+            >
+              📊 Laporan
+            </button>
+          )}
           <div className="text-right">
             <p className="text-xs text-gray-300">
-              {new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+              👤 {user.username} ({user.role})
             </p>
             <p className="text-xs text-green-300">Order #{String(orderNum).padStart(4, "0")}</p>
           </div>
+          <button
+            onClick={handleLogout}
+            className="bg-red-500/20 text-red-300 px-3 py-1.5 rounded-lg text-xs font-medium active:scale-95 transition-transform"
+          >
+            Keluar
+          </button>
         </div>
       </header>
 
