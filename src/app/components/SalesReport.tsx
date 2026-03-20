@@ -95,6 +95,15 @@ export default function SalesReport({ onClose }: SalesReportProps) {
   const totalRevenue = activeData.reduce((s, r) => s + r.total, 0);
   const totalTransactions = activeData.length;
 
+  // Filter expenses based on active date/month selection
+  const activeExpenses = tab === "harian" && selectedDate
+    ? expenses.filter(e => toDateKey(e.created_at) === selectedDate)
+    : tab === "bulanan" && selectedMonth
+    ? expenses.filter(e => toMonthKey(e.created_at) === selectedMonth)
+    : expenses;
+  const totalExpense = activeExpenses.reduce((s, e) => s + e.amount, 0);
+  const netProfit = totalRevenue - totalExpense;
+
   const itemCount: Record<string, number> = {};
   activeData.forEach((r) => r.items.forEach((i) => {
     itemCount[i.name] = (itemCount[i.name] || 0) + i.qty;
@@ -166,18 +175,22 @@ export default function SalesReport({ onClose }: SalesReportProps) {
         )}
 
         {tab !== "pengeluaran" && (
-        <div className="grid grid-cols-3 gap-3 px-5 py-3">
+        <div className="grid grid-cols-2 gap-3 px-5 py-3">
           <div className="bg-primary-light rounded-xl p-3 text-center">
             <p className="text-xs text-gray-500">Pendapatan</p>
             <p className="text-primary font-bold text-sm">{formatRp(totalRevenue)}</p>
           </div>
-          <div className="bg-primary-light rounded-xl p-3 text-center">
-            <p className="text-xs text-gray-500">Transaksi</p>
-            <p className="text-primary font-bold text-sm">{totalTransactions}</p>
+          <div className="bg-red-50 rounded-xl p-3 text-center">
+            <p className="text-xs text-gray-500">Pengeluaran</p>
+            <p className="text-red-500 font-bold text-sm">{formatRp(totalExpense)}</p>
           </div>
-          <div className="bg-primary-light rounded-xl p-3 text-center">
-            <p className="text-xs text-gray-500">Terlaris</p>
-            <p className="text-primary font-bold text-sm truncate">{topItem ? `${topItem[0]} (${topItem[1]})` : "-"}</p>
+          <div className={`rounded-xl p-3 text-center ${netProfit >= 0 ? "bg-primary-light" : "bg-red-50"}`}>
+            <p className="text-xs text-gray-500">Laba Bersih</p>
+            <p className={`font-bold text-sm ${netProfit >= 0 ? "text-primary" : "text-red-500"}`}>{formatRp(netProfit)}</p>
+          </div>
+          <div className="bg-gray-100 rounded-xl p-3 text-center">
+            <p className="text-xs text-gray-500">Transaksi</p>
+            <p className="text-navy font-bold text-sm">{totalTransactions}</p>
           </div>
         </div>
         )}
